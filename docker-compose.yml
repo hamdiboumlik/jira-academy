@@ -1,0 +1,36 @@
+# Lancement sur un serveur (VPS) ou en local avec Docker :
+#   cp .env.example .env   (puis modifier les valeurs)
+#   docker compose up -d --build
+# → http://IP_DU_SERVEUR:3000
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://jira:${POSTGRES_PASSWORD:-jira}@db:5432/jira_academy
+      JWT_SECRET: ${JWT_SECRET:?Définis JWT_SECRET dans .env}
+      TRAINER_CODE: ${TRAINER_CODE:?Définis TRAINER_CODE dans .env}
+      CLASS_CODE: ${CLASS_CODE:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jira
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jira}
+      POSTGRES_DB: jira_academy
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jira -d jira_academy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
